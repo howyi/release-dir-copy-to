@@ -35,7 +35,8 @@ jobs:
       - run: git status
       - name: 差分があればpush
         run: |
-          if ! git status -s
+          git add .
+          if ! $(git status -s)
           then
             git diff
             git status
