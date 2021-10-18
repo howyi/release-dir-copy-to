@@ -35,12 +35,16 @@ jobs:
       - run: git status
       - name: 差分があればpush
         run: |
-          git add -N .
+          git add .
           if ! git diff --exit-code --quiet
           then
+            git diff
+            git status
             git config user.name github-actions
             git config user.email github-actions@github.com
             git add .
+            git diff
+            git status
             git commit -m "Update to version ${{ steps.version.outputs.version }}"
             git push
           fi
