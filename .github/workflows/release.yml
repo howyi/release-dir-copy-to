@@ -25,6 +25,7 @@ jobs:
         with:
           repository: howyi/release-dir-copy-from
           path: tmp_from
+          ref: ${{ github.event.client_payload.ref }}
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
       - name: 対象ディレクトリを移動
         run: cp -r tmp_from/copy/* ./
