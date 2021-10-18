@@ -1,0 +1,50 @@
+name: release
+on:
+  repository_dispatch:
+    types: [target-released]
+jobs:
+  copy-from-repository:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set version variable
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.event.client_payload.ref }} | sed -e "s#refs/tags/##g")
+          echo ::set-output name=version::$VERSION
+      - name: checkout
+        uses: actions/checkout@v2
+      - run: mkdir ../tmp_to
+      - name: 更新後も残したいファイルを退避
+        run: |
+          cp README.md ../tmp_to
+          cp -r .github ../tmp_to
+      - run: ls ../tmp_to
+      - name: ファイル内を全削除
+        run: rm -rf *
+      - name: コピー元リポジトリをclone
+        uses: actions/checkout@v2
+        with:
+          repository: howyi/release-dir-copy-from
+          path: tmp_from
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+      - run: ls tmp_from
+      - run: cp -r tmp_from/copy/* ./
+      - run: ls
+      - run: rm -rf tmp_from/
+      - name: 退避したファイルを戻す
+        run: cp -r ../tmp_to/* .
+      - run: ls
+      - run: echo ${{ github.event.client_payload.ref }}
+      - run: echo ${{ github.event.client_payload.sha }}
+      - run: echo ${{ steps.version.outputs.version }}
+      - name: 差分があればpush
+        run: |
+          git add .; \
+          if (git diff --shortstat | grep '[0-9]'); then \
+            git commit -m "Update to version ${{ steps.version.outputs.version }}"; \
+            git push origin HEAD:${GITHUB_REF}; \
+          fi
+      - name: タグを付ける
+        run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
