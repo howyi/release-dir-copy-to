@@ -1,0 +1,48 @@
+name: release
+on:
+  repository_dispatch:
+    types: [target-released]
+jobs:
+  copy-from-repository:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - run: mkdir ../tmp_to
+      - run: cp README.md ../tmp_to
+      - run: ls ../tmp_to
+      - run: rm -rf *
+      - name: clone from repository
+        uses: actions/checkout@v2
+        with:
+          repository: howyi/release-dir-copy-from
+          path: tmp_from
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+      - run: ls tmp_from
+      - run: cp -r tmp_from/copy/* ./
+      - run: ls
+      - run: rm -rf tmp_from/
+      - run: ls
+      - run: cp -r ../tmp_to/* .
+      - run: ls
+      - run: echo ${{ github.event.client_payload.ref }}
+      - run: echo ${{ github.event.client_payload.sha }}
+      - name: Set version
+        id: version
+        run: |
+          VERSION=$(echo ${{ github.event.client_payload.ref }} | sed -e "s#refs/tags/##g")
+          echo ::set-output name=version::$VERSION
+      - run: echo ${{ steps.version.outputs.version }}
+      - name: 差分があればpush
+        run: |
+          git remote set-url origin https://github-actions:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          if (git diff --shortstat | grep '[0-9]'); then \
+            git add .; \
+            git commit -m "Update to version ${{ steps.version.outputs.version }}"; \
+            git push origin HEAD:${GITHUB_REF}; \
+          fi
+      - run: |
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
